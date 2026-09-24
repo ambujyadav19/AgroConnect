@@ -43,7 +43,7 @@ Before you begin, ensure you have the following installed:
 1. Clone the repository:
 
    bash
-   git clone https://github.com/irshad017/AgriConnect.git
+   git clone https://github.com/ambujyadav19/AgroConnect
 2. Navigate to the Project Directory:   
    bash
    cd AgriConnect
