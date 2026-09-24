@@ -1,0 +1,64 @@
+import React from "react";
+
+const ProfitableFarming = () => {
+  const farmingData = [
+    {
+      title: "Organic Farming",
+      description:
+        "Organic farming is one of the most profitable agricultural practices in India. It involves growing crops without synthetic pesticides, fertilizers, and genetically modified organisms.",
+      image:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIcntjI3H4b5h_agW4ObQqfdqu-NiQqLs3GQ&s", // Replace with a relevant image URL
+      link: "https://www.ceew.in/publications/sustainable-agriculture-india/organic-farming",
+    },
+    {
+      title: "Fish Farming",
+      description:
+        "Fish farming is a very lucrative business in India due to the high demand for fish and other seafood. It involves breeding and raising fish commercially in tanks or enclosures.",
+      image:
+        "data:image/jpeg;base64,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", // Replace with a relevant image URL
+      link: "https://nfdb.gov.in/welcome/about_indian_fisheries",
+    },
+    {
+      title: "Dairy Farming",
+      description:
+        "Dairy farming involves the production of milk from cows or buffaloes. With proper care and management, dairy farming can be highly profitable in both rural and urban areas.",
+      image:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS1FYhwN7aU5tnH0AvUsQD5CMXP11Tg9cu2ng&s", // Replace with a relevant image URL
+      link: "https://updairydevelopment.gov.in/index.aspx",
+    },
+  ];
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-4xl font-bold text-center my-8">Most Profitable Farming in India</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {farmingData.map((farming, index) => (
+          <div
+            key={index}
+            className= " bg-white shadow-md rounded-xl overflow-hidden transition-all hover:shadow-xl"
+          >
+            <img
+              src={farming.image}
+              alt={farming.title}
+              className="w-full h-48 object-cover md:h-64 lg:h-80"
+            />
+            <div className="p-4">
+              <h2 className="text-2xl font-semibold mb-2">{farming.title}</h2>
+              <p className="text-gray-700 mb-4">{farming.description}</p>
+              <a
+                target="_blank"
+                href={farming.link}
+                className="text-blue-500 hover:text-blue-700 transition"
+              >
+                Learn More
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default ProfitableFarming;
