@@ -117,6 +117,9 @@ const extractGeminiText = (result) => {
 
 app.use('/blogs', blogRoutes);
 
+app.get('/',async(req,res)=>{
+    res.json({msg: "from back of agro"});
+})
 app.post('/api/chatbot', async (req, res) => {
     try {
         const { message } = req.body;
