@@ -1,5 +1,6 @@
 # AgriConnect - A Comprehensive Solution for Farmers and Customers
-*Live Demo:* [AgriConnect](https://agri-connect-017.vercel.app/)
+*Live Demo:* [AgriConnect](https://frontend-two-kohl-hpwyycijny.vercel.app/)
+
 
 AgriConnect is a web-based platform designed to bridge the gap between farmers and customers by providing a marketplace where farmers can list their products, and customers can place orders directly. The platform also offers various features like a chatbot for farming-related queries, blogs, dashboards, and an order management system.
 
@@ -42,7 +43,7 @@ Before you begin, ensure you have the following installed:
 1. Clone the repository:
 
    bash
-   git clone https://github.com/irshad017/AgriConnect.git
+   git clone https://github.com/ambujyadav19/AgroConnect
 2. Navigate to the Project Directory:   
    bash
    cd AgriConnect
