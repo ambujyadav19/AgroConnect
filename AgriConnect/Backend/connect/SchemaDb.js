@@ -44,13 +44,16 @@ const Farmers = new mongoose.Schema({
             required: true
         }
     }],
+    supplierType: { type: String },
+    licenseNumber: { type: String },
+    phoneNumber: { type: String },
     productSell: [{
         farmerId: String,
         title: String,
         description: String,
         category: {
             type: String,
-            enum: ['vegetables', 'fruits', 'grains', 'dairy', 'spices', 'oilseeds', 'organic', 'other'],
+            enum: ['vegetables', 'fruits', 'grains', 'dairy', 'spices', 'oilseeds', 'organic', 'equipment', 'fertilizers', 'seeds', 'machinery', 'tools', 'plants', 'other'],
             default: 'other'
         },
         rate: String,
@@ -116,6 +119,28 @@ const Farmers = new mongoose.Schema({
             buyRequests: [{
                 type: String
             }]
+    }],
+    supplyOrders: [{
+        orderRef: String,
+        itemTitle: String,
+        brand: String,
+        category: String,
+        rate: Number,
+        unit: String,
+        quantity: Number,
+        totalAmount: Number,
+        subsidy: String,
+        imageURL: String,
+        deliveryNote: String,
+        status: {
+            type: String,
+            default: 'Confirmed'
+        },
+        orderDate: {
+            type: Date,
+            default: Date.now
+        },
+        estimatedDelivery: String
     }],
 });
 

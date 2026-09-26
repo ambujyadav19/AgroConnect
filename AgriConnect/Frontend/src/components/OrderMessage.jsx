@@ -157,7 +157,7 @@ const OrderMessage = () => {
     
 
     return (
-        <div className="bg-red-100 flex flex-col lg:flex-row h-screen">
+        <div className="bg-gradient-to-br from-emerald-50 via-green-50 to-lime-50 flex flex-col lg:flex-row h-screen">
         {/* Sidebar */}
         <div className=" w-full lg:w-1/4 bg-gray-100 p-4 border-r border-gray-200">
             {/* Profile */}
@@ -167,12 +167,19 @@ const OrderMessage = () => {
             <div className="ml-4">
                 {
                     fetchFarm ? <>
-                        <h2 className="text-sm font-semibold">Farmer Name</h2>
-                        <p className="text-xs text-gray-500">farmer Email</p>
+                        <h2 className="text-sm font-semibold">{localStorage.getItem('role') === 'Supplier' ? 'Kisan Seva Kendra' : 'Farmer Name'}</h2>
+                        <p className="text-xs text-gray-500">{farmerEmail || 'Loading...'}</p>
                     </>
                         :
                         <>
-                            <h2 className="text-sm font-semibold">{farmerName}</h2>
+                            <h2 className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
+                                <span>{localStorage.getItem('role') === 'Supplier' ? (FarmerAllData.farmName || farmerName || 'Kisan Seva Kendra') : farmerName}</span>
+                                {localStorage.getItem('role') === 'Supplier' && (
+                                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-bold border border-amber-300">
+                                        🏪 Kendra
+                                    </span>
+                                )}
+                            </h2>
                             <p className="text-xs text-gray-500">{farmerEmail}</p>
                         </>
                 }
@@ -216,86 +223,107 @@ const OrderMessage = () => {
             </div>
         </div>
 
-        {/* Chat Section */}
-        <div className="w-full lg:w-2/4 p-4 flex flex-col bg-white">
-            {/* Chat Header */}
-            <div className="flex items-center justify-between border-b pb-2 mb-2">
-            <div className="flex items-center">
-                <img 
-                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQlVYQsJxbEDr57v18Wmwi2rXLOGQui08vHw&s"
-                    alt="User" className="border-2 border-black w-10 h-10 rounded-full" />
-                <div className="ml-4">
-                <h2 className="text-sm font-semibold">{OpenCustomer.firstName}</h2>
-                <p className="text-xs text-gray-500">{OpenCustomer.email}</p>
-                <p className="text-xs text-gray-500">{OpenCustomer.phoneNumber}</p>
-                {/* <p className="text-xs text-gray-500">{selectedProductData.userOrder}</p> */}
+        {/* ── Chat Panel ── */}
+        <div className="w-full lg:w-2/4 flex flex-col bg-white border-r border-emerald-100">
+            {/* Chat header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-white">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-lime-400 flex items-center justify-center text-white font-bold text-base uppercase flex-shrink-0">
+                    {OpenCustomer.firstName?.[0] || '?'}
                 </div>
-            </div>
-            </div>
-
-            
-            <div className="flex-grow overflow-y-auto">
-            <div className="mb-4 flex">
-                <img 
-                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQlVYQsJxbEDr57v18Wmwi2rXLOGQui08vHw&s"
-                alt="User" className="w-8 h-8 rounded-full border-2 border-gray-500" />
-                <div className="ml-2 bg-white shadow-lg p-2 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-700 font-medium ">
-                    { ShowSelectData ? <></> : <> The order request is for <span className='font-medium text-indigo-600 '>{selectedProductData.quantity}kg</span> of <span className='font-medium text-indigo-600 '>{selectedProductData.title}</span> priced at <span className='font-medium text-indigo-600'>Rs.{selectedProductData.price}</span>, to be delivered to the address in <span className='font-medium text-indigo-600'>, pincode-{UserAddress.pincode}, {UserAddress.district}, {UserAddress.state}</span> </>}
-                </p>
+                <div>
+                    <h2 className="text-sm font-bold text-gray-800">{OpenCustomer.firstName || 'Select an order'}</h2>
+                    <p className="text-xs text-gray-400">{OpenCustomer.email}</p>
+                    <p className="text-xs text-gray-400">{OpenCustomer.phoneNumber}</p>
                 </div>
             </div>
 
-            {/* <p className="text-sm">BI: {selectedBuyerData._id}</p> */}
-            {/* <p className="text-sm">FO: {selectedProductData._id}</p> */}
-            {/* <p className="text-sm">B: {BuyerID}</p> */}
-            <div className="mb-4 flex justify-end">
-                <div className="flex justify-center pr-3 space-x-2 ml-2 bg-blue-500 text-white p-2 rounded-lg">
-                    {/* <p className="text-sm">F-Order:{FarmerID}</p> */}
-                    <button className='hover:bg-blue-800 w-16 h-8 rounded ' onClick={HandleAccept} >Accept</button>
-                    <button className='hover:bg-blue-800 w-16 h-8 rounded ' >Decline</button>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+                {/* Incoming order message */}
+                <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm flex-shrink-0">📦</div>
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-2xl rounded-tl-none px-4 py-3 max-w-[80%] shadow-sm">
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                            {ShowSelectData ? (
+                                <span className="text-gray-400 italic">Select an order from the sidebar to view details.</span>
+                            ) : (
+                                <>The order request is for{' '}
+                                    <span className="font-semibold text-emerald-700">{selectedProductData.quantity}kg</span> of{' '}
+                                    <span className="font-semibold text-emerald-700">{selectedProductData.title}</span> priced at{' '}
+                                    <span className="font-semibold text-emerald-700">₹{selectedProductData.price}</span>, deliver to{' '}
+                                    <span className="font-semibold text-emerald-700">Pincode-{UserAddress.pincode}, {UserAddress.district}, {UserAddress.state}</span>.
+                                </>
+                            )}
+                        </p>
+                    </div>
                 </div>
-                <img 
-                src='data:image/png;base64,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'
-                alt="User" className="w-8 h-8 rounded-full" />
+
+                {/* Action buttons */}
+                {!ShowSelectData && (
+                    <div className="flex justify-end gap-3">
+                        <button
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-lime-500 text-white text-sm font-semibold rounded-xl shadow-md hover:scale-105 transition-all duration-200"
+                            onClick={HandleAccept}
+                        >
+                            ✓ Accept
+                        </button>
+                        <button className="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-sm font-semibold rounded-xl transition-all duration-200">
+                            ✕ Decline
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* More messages can go here */}
-            </div>
-
-            {/* Input field */}
-            <div className="mt-4 border-t pt-2">
-            <input
-                type="text"
-                placeholder="Type something..."
-                className="w-full p-2 border border-gray-300 rounded-md"
-            />
+            {/* Input */}
+            <div className="border-t border-emerald-100 px-4 py-3">
+                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5">
+                    <input
+                        type="text"
+                        placeholder="Type a message..."
+                        className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+                    />
+                    <button className="text-emerald-600 font-semibold text-sm hover:text-emerald-700 transition-colors">Send</button>
+                </div>
             </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="hidden lg:block lg:w-1/4 bg-gray-100 p-4">
-            <h2 className="text-lg font-semibold mb-4 ">Customer Info</h2>
-            {/* User details */}
-            <div className="bg-white h-12 shadow-lg rounded-lg flex items-center mb-4">
-                <img 
-                    src='data:image/png;base64,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'
-                    alt="User" className="ml-1 w-10 h-10 rounded-full" />
-                <div className="ml-4">
-                    <h3 className="text-mf font-medium">{OpenCustomer.firstName} </h3>
-                    <p className="text-sm text-gray-500">{OpenCustomer.email}</p>
+        {/* ── Right Info Panel ── */}
+        <div className="hidden lg:flex lg:w-1/4 flex-col bg-white p-5 gap-4 overflow-y-auto">
+            <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-semibold">Order Info</p>
+
+            {/* Customer card */}
+            <div className="bg-gradient-to-br from-emerald-50 to-lime-50 border border-emerald-100 rounded-[18px] p-4">
+                <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-semibold mb-2">Customer</p>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-lime-400 flex items-center justify-center text-white font-bold uppercase flex-shrink-0">
+                        {OpenCustomer.firstName?.[0] || '?'}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="font-bold text-gray-800 text-sm truncate">{OpenCustomer.firstName}</p>
+                        <p className="text-xs text-gray-400 truncate">{OpenCustomer.email}</p>
+                        <p className="text-xs text-gray-400">{OpenCustomer.phoneNumber}</p>
+                    </div>
                 </div>
             </div>
-            {/* Gallery */}
-            <div className="px-2 h-28 mb-2 rounded-lg shadow-lg bg-white gap-2">
-                <p className='text-md font-medium underline'>Seller Address</p>
-                <p>Farmname: {FarmerAllData.farmName} </p>
-                <p className='text-medium text-black'>Farm Location: {FarmAddress.pincode}, {FarmAddress.district}, {FarmAddress.state} </p>
+
+            {/* Seller address */}
+            <div className="bg-white border border-emerald-100 rounded-[18px] p-4 shadow-sm">
+                <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-semibold mb-2">🏡 Seller Address</p>
+                <p className="text-sm font-medium text-gray-700">{FarmerAllData.farmName}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                    Pincode: {FarmAddress.pincode}<br />
+                    {FarmAddress.district}, {FarmAddress.state}
+                </p>
             </div>
-            <div className="px-2 h-28 mt-2 rounded-lg shadow-lg bg-white gap-2 ">
-            <p className='text-md font-medium underline'>Delivery Address</p>
-                <p>PhoneNumber: {OpenCustomer.phoneNumber} </p>
-                <p className='text-medium text-black'>Your Address: {UserAddress.pincode}, {UserAddress.district}, {UserAddress.state}</p>
+
+            {/* Delivery address */}
+            <div className="bg-white border border-emerald-100 rounded-[18px] p-4 shadow-sm">
+                <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-semibold mb-2">📍 Delivery Address</p>
+                <p className="text-sm font-medium text-gray-700">📞 {OpenCustomer.phoneNumber}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                    Pincode: {UserAddress.pincode}<br />
+                    {UserAddress.district}, {UserAddress.state}
+                </p>
             </div>
         </div>
         <Toaster/>

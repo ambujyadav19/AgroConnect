@@ -18,7 +18,12 @@ app.use(body_parser.json())
 app.use(cors())
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const FALLBACK_MODELS = ['gemini-3.6-flash'];
+const FALLBACK_MODELS = [
+    'gemini-3.8-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite'
+];
 
 const seedMarketplaceBlogs = async () => {
     try {
@@ -117,12 +122,12 @@ const extractGeminiText = (result) => {
 
 app.use('/blogs', blogRoutes);
 
-app.get('/',async(req,res)=>{
-    res.json({msg: "from back of agro"});
+app.get('/', async (req, res) => {
+    res.json({ msg: "from back of agro" });
 })
 app.post('/api/chatbot', async (req, res) => {
     try {
-        const { message } = req.body;
+        const { message, language = 'English' } = req.body;
 
         if (!message || !message.trim()) {
             return res.status(400).json({ error: 'Message is required' });
@@ -132,7 +137,7 @@ app.post('/api/chatbot', async (req, res) => {
             return res.status(500).json({ error: 'GEMINI_API_KEY is missing in the backend environment variables.' });
         }
 
-        const prompt = `You are a farming chatbot. Answer only farming-related questions. Use the same language as the user and provide practical, detailed guidance. User question: ${message}`;
+        const prompt = `You are AgroHelp, a highly knowledgeable and supportive agricultural assistant. You MUST provide your entire response in the "${language}" language. Ensure the response, advice, recommendations, and explanations are naturally and fluently written in ${language}. Provide clear and practical steps on crops, soil preparation, pest management, irrigation, fertilizers, weather protection, or mandi trade. User question: ${message}`;
 
         let lastError = null;
         for (const modelName of FALLBACK_MODELS) {
@@ -142,32 +147,50 @@ app.post('/api/chatbot', async (req, res) => {
                         model: modelName,
                         contents: [{ role: 'user', parts: [{ text: prompt }] }],
                     }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error(`Model ${modelName} timed out`)), 20000))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error(`Model ${modelName} timed out`)), 18000))
                 ]);
 
-                const reply = extractGeminiText(response) || 'I am not able to provide a response right now.';
-                return res.json({ reply });
+                const reply = extractGeminiText(response);
+                if (reply && reply.trim()) {
+                    return res.json({ reply: reply.trim() });
+                }
             } catch (error) {
                 lastError = error;
-                console.error(`Gemini model failed: ${modelName}`, error?.message || error);
+                const errString = error?.message || String(error);
+                console.warn(`Gemini model ${modelName} attempt failed:`, errString.substring(0, 120));
+                
+                // If it's a 503 high demand or 429 quota error, brief pause before trying next fallback model
+                if (errString.includes('503') || errString.includes('429') || errString.includes('high demand')) {
+                    await new Promise((r) => setTimeout(r, 400));
+                }
             }
         }
 
-        return res.status(500).json({
-            error: lastError?.message || 'Failed to generate AI response with the configured Gemini key.',
+        // Resilient fallback if Google's servers have a temporary outage across models
+        console.error('All Gemini fallback models exhausted, returning field advisory');
+        const fallbackAdvisory = `*Note: Live AI service is temporarily experiencing high demand. Here is essential farming guidance for your query:*\n\n` +
+            `• **Soil & Nutrients**: Always verify local soil test reports before heavy chemical application. Maintain balanced NPK and organic matter (compost/FYM).\n` +
+            `• **Water Management**: Irrigate in early mornings or evenings to minimize evaporation loss. Inspect drainage to prevent waterlogging.\n` +
+            `• **Pest & Disease Care**: Scout fields regularly. Use neem oil or integrated pest management (IPM) before applying targeted pesticides.\n` +
+            `• **Market & Weather**: Check the AgriConnect Weather section for local spray windows and rainfall forecast.\n\n` +
+            `*Please try asking your specific question again in a moment.*`;
+
+        return res.json({ 
+            reply: fallbackAdvisory, 
+            isFallback: true 
         });
     } catch (error) {
-        console.error('Gemini route error:', error);
+        console.error('Gemini route unexpected error:', error);
         return res.status(500).json({
-            error: error.message || 'Failed to generate AI response',
+            error: 'AI service temporarily unavailable. Please try again in a few moments.',
         });
     }
 });
 
-app.post('/sign',async(req,resp,next)=>{
-    try{
+app.post('/sign', async (req, resp, next) => {
+    try {
         const {
-            email, 
+            email,
             password,
             firstName,
             lastName,
@@ -178,14 +201,14 @@ app.post('/sign',async(req,resp,next)=>{
             loss,
             farmLocation,
         } = req.body;
-        
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await Farmer.findOne({ email });
         if (user) {
             resp.status(400).json({ error: 'Username already exists' });
             return;
         }
-        const newUser = new Farmer({ 
+        const newUser = new Farmer({
             youAre: "Farmer",
             email: email,
             password: hashedPassword,
@@ -201,21 +224,21 @@ app.post('/sign',async(req,resp,next)=>{
         });
         await newUser.save();
         const token = jwt.sign({ farmerId: newUser._id }, JWT_SECRET);
-        resp.json({ 
+        resp.json({
             message: 'User registered successfully',
             token: token,
             farmerId: newUser._id
         });
-    }catch(err){
-        resp.status(500).json({ error: 'Failed to register user',err });
+    } catch (err) {
+        resp.status(500).json({ error: 'Failed to register user', err });
         console.log(err);
     }
 })
 //USER-SIGNUP-----
-app.post('/signUpUSER',async(req,resp,next)=>{
-    try{
+app.post('/signUpUSER', async (req, resp, next) => {
+    try {
         const {
-            username, 
+            username,
             password,
             firstName,
             lastName,
@@ -223,7 +246,7 @@ app.post('/signUpUSER',async(req,resp,next)=>{
             address
         } = req.body;
         // console.log(address)
-        
+
         const hashedPassword = await bcrypt.hash(password, 10);
         // console.log(hashedPassword)
         const user = await User.findOne({ email: username });
@@ -234,7 +257,7 @@ app.post('/signUpUSER',async(req,resp,next)=>{
             return;
         }
         // console.log(user)
-        const newUser = new User({ 
+        const newUser = new User({
             youAre: "Customer",
             email: username,
             password: hashedPassword,
@@ -247,38 +270,147 @@ app.post('/signUpUSER',async(req,resp,next)=>{
         await newUser.save();
         const token = jwt.sign({ UserId: newUser._id }, JWT_SECRET);
         // console.log(newUser._id)
-        resp.json({ 
+        resp.json({
             message: 'User registered successfully',
             token: token,
             UserId: newUser._id
         });
-    }catch(err){
-        resp.status(500).json({ error: 'Failed to register user',err });
+    } catch (err) {
+        resp.status(500).json({ error: 'Failed to register user', err });
         console.log(err);
     }
 })
-// app.get('/getUSERS', async (req,resp)=>{
-//     try{
-//         const user = await User.findOne({})
-//     }
-// })
+
+// KISAN SEVA KENDRA / SUPPLIER SIGNUP
+app.post('/signSupplier', async (req, resp) => {
+    try {
+        const {
+            email,
+            password,
+            kendraName,
+            ownerName,
+            phoneNumber,
+            supplierType,
+            licenseNumber,
+            pincode,
+            district,
+            state
+        } = req.body;
+
+        if (!email || !password || !kendraName) {
+            return resp.status(400).json({ error: 'Kendra Name, Email, and Password are required.' });
+        }
+
+        const existingFarmer = await Farmer.findOne({ email });
+        const existingUser = await User.findOne({ email });
+        if (existingFarmer || existingUser) {
+            return resp.status(400).json({ error: 'An account with this email already exists.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newSupplier = new Farmer({
+            youAre: "Supplier",
+            email: email.trim().toLowerCase(),
+            password: hashedPassword,
+            firstName: ownerName || kendraName,
+            farmName: kendraName,
+            supplierType: supplierType || 'Kisan Seva Kendra',
+            licenseNumber: licenseNumber || '',
+            phoneNumber: phoneNumber || '',
+            total_expenditure: 0,
+            total_income: 0,
+            total_profit: 0,
+            total_loss: 0,
+            farmLocation: [{
+                pincode: Number(pincode) || 110001,
+                district: district || 'Central',
+                state: state || 'Delhi'
+            }]
+        });
+
+        await newSupplier.save();
+        const token = jwt.sign({ email: newSupplier.email, userId: newSupplier._id, role: 'Supplier' }, JWT_SECRET, { expiresIn: '7d' });
+        
+        return resp.json({
+            message: 'Kisan Seva Kendra registered successfully',
+            token: token,
+            farmerId: newSupplier._id,
+            userId: newSupplier._id,
+            role: 'Supplier',
+            kendraName: newSupplier.farmName,
+            firstName: newSupplier.firstName
+        });
+    } catch (err) {
+        console.error("Supplier registration error:", err);
+        return resp.status(500).json({ error: 'Failed to register Kisan Seva Kendra', details: err.message });
+    }
+});
+
+// KISAN SEVA KENDRA / SUPPLIER LOGIN
+app.post('/loginSupplier', async (req, resp) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return resp.status(400).json({ error: "Email and password are required" });
+        }
+
+        const user = await Farmer.findOne({ email: email.trim().toLowerCase() });
+        if (!user) {
+            return resp.status(400).json({ error: 'No Kendra or Supplier found with this email' });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return resp.status(400).json({ error: 'Invalid email or password' });
+        }
+
+        const role = user.youAre || 'Supplier';
+        const token = jwt.sign({ email: user.email, userId: user._id, role }, JWT_SECRET, { expiresIn: '7d' });
+        return resp.json({
+            message: 'Login successful',
+            token,
+            userId: user._id,
+            farmerId: user._id,
+            role,
+            kendraName: user.farmName || user.firstName,
+            firstName: user.firstName
+        });
+    } catch (err) {
+        console.error("Error during supplier login", err);
+        return resp.status(500).json({
+            error: "Error occurred during supplier login",
+            details: err.message,
+        });
+    }
+});
+
 app.post('/login', async (req, resp) => {
     try {
         const { email, password } = req.body;
-        
+
         if (!email || !password) {
             return resp.status(400).json({ msg: "Email and password are required" });
         }
 
-        const user = await Farmer.findOne({ email });
+        const user = await Farmer.findOne({ email: email.trim().toLowerCase() });
         if (!user) {
             return resp.status(400).json({ error: 'Invalid email or password' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (isPasswordValid) {
-            const token = jwt.sign({ email, userId: user._id }, JWT_SECRET, { expiresIn: '1h' }); // Token with 1-hour expiration
-            return resp.json({ message: 'Login successful', token });
+            const role = user.youAre || 'Farmer';
+            const token = jwt.sign({ email: user.email, userId: user._id, role }, JWT_SECRET, { expiresIn: '7d' });
+            return resp.json({ 
+                message: 'Login successful', 
+                token, 
+                role, 
+                userId: user._id, 
+                farmerId: user._id, 
+                farmName: user.farmName,
+                firstName: user.firstName 
+            });
         } else {
             return resp.status(400).json({ error: 'Invalid email or password' });
         }
@@ -294,7 +426,7 @@ app.post('/login', async (req, resp) => {
 app.post('/loginUSER', async (req, resp) => {
     try {
         const { email, password } = req.body;
-        
+
         if (!email || !password) {
             return resp.status(400).json({ msg: "Email and password are required" });
         }
@@ -320,33 +452,33 @@ app.post('/loginUSER', async (req, resp) => {
     }
 });
 // market_place ALL_PRODUCTS ARRAY AND ALL_FARMER 
-app.get('/market_product', async(req,resp)=>{
-    try{
+app.get('/market_product', async (req, resp) => {
+    try {
         const farm = await Farmer.find()
-        const product = await Farmer.find({},'productSell')
+        const product = await Farmer.find({}, 'productSell')
         // console.log("ProducT: ",product)
         const products = product.flatMap(farmer => farmer.productSell);
 
-        if(!products){
+        if (!products) {
             resp.status(404).json({
                 msg: "No products found"
             })
         }
-        if(!farm){
+        if (!farm) {
             resp.status(404).json({
                 msg: "No Farmer found"
             })
         }
         // console.log("Products: ",products)
         // console.log("Farmer detail: ",farm)
-        if(product && farm){
+        if (product && farm) {
             resp.status(200).json({
                 farmerData: farm,
                 data: products,
                 msg: "Successfully Fetched"
             })
         }
-    }catch(err){
+    } catch (err) {
         console.log("Error")
         resp.status(500).json({
             msg: err.message
@@ -354,30 +486,30 @@ app.get('/market_product', async(req,resp)=>{
     }
 })
 // FARMER-CURRENT-DATA
-app.get('/currentFarmerData', async(req,resp)=>{
-    try{
+app.get('/currentFarmerData', async (req, resp) => {
+    try {
         const farmerID = req.query.FarmerID
         // console.log("f: ",farmerID)
-        if(!farmerID){
+        if (!farmerID) {
             resp.status(300).json({
                 msg: "farmerID not present"
             })
-        }else{
+        } else {
             const farm = await Farmer.findById(farmerID)
             // console.log(farm)
-            if(!farm){
+            if (!farm) {
                 resp.status(404).json({
                     msg: "No Farmer found"
                 })
             }
-            if( farm){
+            if (farm) {
                 resp.status(200).json({
                     farmerData: farm,
                     msg: "Successfully Fetched"
                 })
             }
         }
-    }catch(err){
+    } catch (err) {
         console.log("Error")
         resp.status(500).json({
             msg: err.message
@@ -385,23 +517,23 @@ app.get('/currentFarmerData', async(req,resp)=>{
     }
 })
 // FARMER-CURRENT-DATA
-app.get('/currentFarmerDataPosts', async(req,resp)=>{
-    try{
+app.get('/currentFarmerDataPosts', async (req, resp) => {
+    try {
         const farmerID = req.query.FarmerID
         // console.log("f: ",farmerID)
-        if(!farmerID){
+        if (!farmerID) {
             resp.status(300).json({
                 msg: "farmerID not present"
             })
-        }else{
+        } else {
             const farm = await Farmer.findById(farmerID).populate('Blog')
             // console.log(farm)
-            if(!farm){
+            if (!farm) {
                 resp.status(404).json({
                     msg: "No Farmer found"
                 })
             }
-            if( farm){
+            if (farm) {
                 resp.status(200).json({
                     farmerData: farm,
                     Blog: farm.Blog,
@@ -409,7 +541,7 @@ app.get('/currentFarmerDataPosts', async(req,resp)=>{
                 })
             }
         }
-    }catch(err){
+    } catch (err) {
         console.log("Error")
         resp.status(500).json({
             msg: err.message
@@ -417,29 +549,29 @@ app.get('/currentFarmerDataPosts', async(req,resp)=>{
     }
 })
 // USER-CURRENT-DATA
-app.get('/currentUserData', async(req,resp)=>{
-    try{
+app.get('/currentUserData', async (req, resp) => {
+    try {
         const userID = req.query.userId
-        if(!userID){
+        if (!userID) {
             resp.status(300).json({
                 msg: "UserID not present"
             })
-        }else{
+        } else {
             const user = await User.findById(userID)
-            if(!user){
+            if (!user) {
                 resp.status(404).json({
                     msg: "No Farmer found"
                 })
             }
             // console.log("USER: ", user)
-            if(user){
+            if (user) {
                 resp.status(200).json({
                     userData: user,
                     msg: "Successfully Fetched"
                 })
             }
         }
-    }catch(err){
+    } catch (err) {
         console.log("Error")
         resp.status(500).json({
             msg: err.message
@@ -523,15 +655,15 @@ app.get('/currentUserUserDataOrder', async (req, res) => {
 
 // PRODUCT-ADD & SEE MY PREVIOUS PRODUCT POSTS---
 // PRODUCT-ADD & SEE MY PREVIOUS PRODUCT POSTS---
-app.post('/updateProduct/:farmerId', async(req,resp)=>{
-    try{
-        const {farmerId} = req.params
+app.post('/updateProduct/:farmerId', async (req, resp) => {
+    try {
+        const { farmerId } = req.params
         const {
-            title, 
+            title,
             description,
             category,
-            rate, 
-            imageURL, 
+            rate,
+            imageURL,
             quantity,
             farmLocation
         } = req.body
@@ -555,7 +687,7 @@ app.post('/updateProduct/:farmerId', async(req,resp)=>{
             return resp.status(404).json({ msg: "Farmer not found" });
         }
         resp.status(201).json({ msg: "Product added successfully", updatedFarmer });
-    }catch(err){
+    } catch (err) {
         resp.status(400).json({
             msg: "Error Message",
             error: err.message
@@ -609,10 +741,10 @@ app.put('/editProductPrice', async (req, resp) => {
             return resp.status(404).json({ error: 'Farmer or Product not found' });
         }
 
-        resp.status(200).json({ 
+        resp.status(200).json({
             msg: 'Product updated successfully',
             updatedFields: updateFields,
-            result 
+            result
         });
     } catch (err) {
         console.error('Error updating product price:', err);
@@ -673,7 +805,7 @@ app.delete('/deleteMyProduct', async (req, resp) => {
             resp.status(404).json({ message: 'Failed To Delete Product' });
         }
     } catch (err) {
-        console.log("ErroR: ",err)
+        console.log("ErroR: ", err)
         resp.status(500).json({
             msg: "Error Message",
             error: err.message
@@ -684,19 +816,19 @@ app.delete('/deleteMyProduct', async (req, resp) => {
 
 
 // see my products added
-app.get('/addProduct',async(req,resp)=>{
-    try{
+app.get('/addProduct', async (req, resp) => {
+    try {
         const farmerID = req.query.farmerId
         // console.log(farmerID)
         const products = await Farmer.findOne(
-            {_id: farmerID}
+            { _id: farmerID }
         )
         // console.log(products)
         resp.status(200).json({
             msg: "Fetched",
             farmerData: products
         })
-    }catch(err){
+    } catch (err) {
         resp.status(500).json({
             msg: "Error in fetching product data",
             error: err.message
@@ -704,21 +836,21 @@ app.get('/addProduct',async(req,resp)=>{
     }
 })
 // BUY REQUEST----
-app.post('/buyRequest', async(req,resp)=>{
-    try{
+app.post('/buyRequest', async (req, resp) => {
+    try {
         const sellerID = req.query.SellerId
         const buyerData = req.body
-        
+
         // console.log("seller",sellerID)
         // console.log("DATA",buyerData)
         const buy = await Farmer.findByIdAndUpdate(
             sellerID,
-            {$push: {order: buyerData}},
-            {new: true}
+            { $push: { order: buyerData } },
+            { new: true }
         )
         // console.log("buy")
         // console.log("BUY",buy)
-        if(!buy){
+        if (!buy) {
             return resp.status(404).send({
                 msg: "Farmer Not Found"
             })
@@ -727,7 +859,7 @@ app.post('/buyRequest', async(req,resp)=>{
         resp.status(200).json({
             msg: "Successfully Ordered!"
         })
-    }catch(err){
+    } catch (err) {
         console.log("R")
         resp.status(500).json({
             msg: "Not Ordered",
@@ -799,21 +931,21 @@ app.post('/myOrderUpdateUser', async (req, resp) => {
 
 
 //farmer-accept-request-post occurs in user from pending-to--accepted
-app.post('/myOrderUpdateUserAccept', async(req,resp)=>{
-    try{
+app.post('/myOrderUpdateUserAccept', async (req, resp) => {
+    try {
         const buyerID = req.query.buyerId
         const buyerData = req.body
-        
+
         // console.log("seller",sellerID)
         // console.log("DATA",buyerData)
         const buy = await User.findByIdAndUpdate(
             buyerID,
-            {$push: {myOrder: {}}},
-            {new: true}
+            { $push: { myOrder: {} } },
+            { new: true }
         )
         // console.log("buy")
         // console.log("BUY",buy)
-        if(!buy){
+        if (!buy) {
             return resp.status(404).send({
                 msg: "Farmer Not Found"
             })
@@ -822,7 +954,7 @@ app.post('/myOrderUpdateUserAccept', async(req,resp)=>{
         resp.status(200).json({
             msg: "Successfully Ordered!"
         })
-    }catch(err){
+    } catch (err) {
         console.log("R")
         resp.status(500).json({
             msg: "Not Ordered",
@@ -905,14 +1037,87 @@ app.post('/orderUpdateUserAccept', async (req, res) => {
             ProductData: order,
             msg: order.modifiedCount > 0 ? "Order status updated successfully" : "Order was already accepted"
         });
-
     } catch (err) {
         console.error("Error in orderUpdateUserAccept:", err);
         res.status(500).json({ msg: err.message });
     }
 });
 
+// ── FARMER SUPPLY ORDERS (Inputs, Fertilizers, Seeds, Equipment) ──────────────
+app.post('/api/farmerSupplyOrder', async (req, res) => {
+    try {
+        const { farmerId, orderData } = req.body;
+        if (!farmerId || !orderData) {
+            return res.status(400).json({ error: "farmerId and orderData are required" });
+        }
+        if (!mongoose.Types.ObjectId.isValid(farmerId)) {
+            return res.status(400).json({ error: "Invalid farmerId format" });
+        }
 
+        const farmer = await Farmer.findByIdAndUpdate(
+            farmerId,
+            { $push: { supplyOrders: { ...orderData, orderDate: new Date() } } },
+            { new: true }
+        );
+
+        if (!farmer) {
+            return res.status(404).json({ error: "Farmer not found" });
+        }
+
+        res.status(201).json({
+            message: "Supply order placed successfully",
+            order: orderData,
+            supplyOrders: farmer.supplyOrders
+        });
+    } catch (err) {
+        console.error("Error in farmerSupplyOrder:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/farmerSupplyOrders/:farmerId', async (req, res) => {
+    try {
+        const { farmerId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(farmerId)) {
+            return res.status(400).json({ error: "Invalid farmerId format" });
+        }
+
+        const farmer = await Farmer.findById(farmerId);
+        if (!farmer) {
+            return res.status(404).json({ error: "Farmer not found" });
+        }
+
+        res.status(200).json({
+            supplyOrders: farmer.supplyOrders || []
+        });
+    } catch (err) {
+        console.error("Error in getFarmerSupplyOrders:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/farmerSupplyOrder/:farmerId/:orderRef', async (req, res) => {
+    try {
+        const { farmerId, orderRef } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(farmerId)) {
+            return res.status(400).json({ error: "Invalid farmerId format" });
+        }
+
+        const farmer = await Farmer.findByIdAndUpdate(
+            farmerId,
+            { $pull: { supplyOrders: { orderRef: orderRef } } },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: "Order cancelled successfully",
+            supplyOrders: farmer?.supplyOrders || []
+        });
+    } catch (err) {
+        console.error("Error in deleteFarmerSupplyOrder:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {

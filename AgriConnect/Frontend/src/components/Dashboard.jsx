@@ -26,7 +26,9 @@ import {
     faRobot,
     faLandmark,
     faShieldAlt,
-    faTag
+    faTag,
+    faStore,
+    faMessage
 } from '@fortawesome/free-solid-svg-icons';
 import { API_BASE_URL } from '../config';
 import { CATEGORIES } from './CategorySelect';
@@ -64,6 +66,9 @@ const Dashboard = () => {
                     const data = response.data.farmerData;
                     setFarmerAllData(data);
                     setFarmerSellProducts(data.productSell || []);
+                    if (data.farmLocation?.[0]) {
+                        setFarmAddress(data.farmLocation[0]);
+                    }
                     // Deduplicate duplicate orders from historical double-saves
                     const rawOrders = data.order || [];
                     const uniqueOrders = [];
@@ -159,14 +164,17 @@ const Dashboard = () => {
         );
     }
 
+    // ── Check Role ─────────────────────────────────────────────────────────
+    const isSupplier = localStorage.getItem('role') === 'Supplier' || FarmerAllData.youAre === 'Supplier';
+
     // ── Not Logged In State ──────────────────────────────────────────────────
     if (!localStorage.getItem('FarmerId')) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-emerald-900 to-green-900 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
                     <div className="text-6xl mb-4">🌾</div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Farmer Dashboard</h2>
-                    <p className="text-gray-500 text-sm mb-6">Please log in with your Farmer account to access your command center, sales, and inventory.</p>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">AgriConnect Dashboard</h2>
+                    <p className="text-gray-500 text-sm mb-6">Please log in with your Farmer or Kisan Seva Kendra account to access your command center, sales, and inventory.</p>
                     <Link to="/login" className="block w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-colors">
                         Go to Login
                     </Link>
@@ -182,7 +190,11 @@ const Dashboard = () => {
                 HERO BANNER & QUICK ACTIONS
             ═══════════════════════════════════════════════════════════════════ */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-green-800 to-teal-900 p-6 sm:p-8 text-white shadow-xl">
+                <div className={`relative overflow-hidden rounded-3xl p-6 sm:p-8 text-white shadow-xl ${
+                    isSupplier 
+                        ? 'bg-gradient-to-r from-teal-900 via-emerald-800 to-slate-900' 
+                        : 'bg-gradient-to-r from-emerald-800 via-green-800 to-teal-900'
+                }`}>
                     
                     {/* Background glow & decorative circles */}
                     <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -190,11 +202,18 @@ const Dashboard = () => {
 
                     <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                         
-                        {/* Farmer Identity */}
+                        {/* Identity */}
                         <div className="flex items-start sm:items-center gap-4">
                             <div className="relative">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-amber-400 to-emerald-300 text-emerald-950 font-black text-2xl sm:text-3xl flex items-center justify-center shadow-lg border-2 border-white/30">
-                                    {FarmerAllData.firstName ? FarmerAllData.firstName.charAt(0).toUpperCase() : '👨‍🌾'}
+                                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl font-black text-2xl sm:text-3xl flex items-center justify-center shadow-lg border-2 border-white/30 ${
+                                    isSupplier 
+                                        ? 'bg-gradient-to-tr from-amber-400 to-orange-400 text-slate-950' 
+                                        : 'bg-gradient-to-tr from-amber-400 to-emerald-300 text-emerald-950'
+                                }`}>
+                                    {isSupplier 
+                                        ? <FontAwesomeIcon icon={faStore} className="text-2xl sm:text-3xl" /> 
+                                        : (FarmerAllData.firstName ? FarmerAllData.firstName.charAt(0).toUpperCase() : '👨‍🌾')
+                                    }
                                 </div>
                                 <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 border-2 border-emerald-900 rounded-full flex items-center justify-center" title="Online & Active">
                                     <span className="w-2 h-2 bg-white rounded-full animate-ping" />
@@ -204,14 +223,19 @@ const Dashboard = () => {
                             <div>
                                 <div className="flex flex-wrap items-center gap-2 mb-1">
                                     <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                                        Welcome, {FarmerAllData.firstName || 'Farmer'}!
+                                        Welcome, {isSupplier ? (FarmerAllData.farmName || FarmerAllData.firstName || 'Kisan Seva Kendra') : (FarmerAllData.firstName || 'Farmer')}!
                                     </h1>
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                                        <FontAwesomeIcon icon={faShieldAlt} className="text-[10px]" /> Verified Farmer
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                        isSupplier 
+                                            ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40' 
+                                            : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/40'
+                                    }`}>
+                                        <FontAwesomeIcon icon={isSupplier ? faStore : faShieldAlt} className="text-[10px]" /> 
+                                        {isSupplier ? '🏪 Verified Kisan Seva Kendra' : 'Verified Farmer'}
                                     </span>
                                 </div>
                                 <p className="text-emerald-200 text-sm font-medium flex items-center gap-2 flex-wrap">
-                                    <span className="font-semibold text-white">{FarmerAllData.farmName || 'My Farm'}</span>
+                                    <span className="font-semibold text-white">{FarmerAllData.farmName || (isSupplier ? 'Kisan Seva Kendra Hub' : 'My Farm')}</span>
                                     <span>•</span>
                                     <span className="flex items-center gap-1 text-emerald-300">
                                         <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
@@ -228,7 +252,15 @@ const Dashboard = () => {
                                 className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition-all duration-200 text-sm hover:-translate-y-0.5"
                             >
                                 <FontAwesomeIcon icon={faPlus} />
-                                List New Product
+                                {isSupplier ? 'List Equipment & Supplies' : 'List New Product'}
+                            </Link>
+
+                            <Link
+                                to="/OrderMessage"
+                                className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2.5 rounded-xl backdrop-blur-sm border border-white/20 transition-all duration-200 text-sm hover:-translate-y-0.5"
+                            >
+                                <FontAwesomeIcon icon={faMessage} />
+                                Order Messages
                             </Link>
 
                             <Link
@@ -237,14 +269,6 @@ const Dashboard = () => {
                             >
                                 <FontAwesomeIcon icon={faShoppingBag} />
                                 Marketplace
-                            </Link>
-
-                            <Link
-                                to="/create"
-                                className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2.5 rounded-xl backdrop-blur-sm border border-white/20 transition-all duration-200 text-sm hover:-translate-y-0.5"
-                            >
-                                <FontAwesomeIcon icon={faPen} />
-                                Write Post
                             </Link>
 
                             <Link

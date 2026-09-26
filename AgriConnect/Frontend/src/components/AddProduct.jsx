@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSeedling, faTrash, faPlus, faTimes, faTag, faImage, faWeightScale, faIndianRupeeSign, faAlignLeft, faBoxes, faPen, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faSeedling, faTrash, faPlus, faTimes, faTag, faImage, faWeightScale, faIndianRupeeSign, faAlignLeft, faBoxes, faPen, faCheck, faStore } from '@fortawesome/free-solid-svg-icons';
 import { API_BASE_URL } from '../config';
 import { CATEGORIES } from './CategorySelect';
 
@@ -237,6 +237,8 @@ const ProductManager = () => {
     const getCatInfo = (catId) => PRODUCT_CATEGORIES.find(c => c.id === catId) || { emoji: '📦', label: 'Other', color: 'from-gray-400 to-gray-500' };
 
     // ── Filtered products ────────────────────────────────────────────────────
+    const isSupplier = localStorage.getItem('role') === 'Supplier';
+
     const displayedProducts = filterCat === 'all'
         ? products
         : products.filter(p => p.category === filterCat);
@@ -250,17 +252,23 @@ const ProductManager = () => {
                 <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                            <FontAwesomeIcon icon={faSeedling} className="text-green-400" />
-                            My Product Listings
+                            <FontAwesomeIcon icon={isSupplier ? faStore : faSeedling} className={isSupplier ? "text-amber-400" : "text-green-400"} />
+                            {isSupplier ? 'Kisan Seva Kendra - Equipment & Supplies Catalog' : 'My Product Listings'}
                         </h1>
-                        <p className="text-green-300 text-sm mt-0.5">Manage your farm products for sale</p>
+                        <p className="text-green-300 text-sm mt-0.5">
+                            {isSupplier ? 'List and manage farm equipment, tools, seeds, fertilizers, and supplies' : 'Manage your farm products for sale'}
+                        </p>
                     </div>
                     <button
                         onClick={() => setShowForm(true)}
-                        className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg hover:shadow-green-500/30 transition-all duration-200"
+                        className={`flex items-center gap-2 text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all duration-200 ${
+                            isSupplier 
+                                ? 'bg-amber-600 hover:bg-amber-500 hover:shadow-amber-500/30' 
+                                : 'bg-green-500 hover:bg-green-400 hover:shadow-green-500/30'
+                        }`}
                     >
                         <FontAwesomeIcon icon={faPlus} />
-                        Add New Product
+                        {isSupplier ? 'Add Equipment / Supply' : 'Add New Product'}
                     </button>
                 </div>
             </div>
@@ -293,14 +301,18 @@ const ProductManager = () => {
                 {/* ── Empty State ── */}
                 {fetched || displayedProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 text-center">
-                        <div className="text-7xl mb-4">🌾</div>
-                        <h3 className="text-white text-2xl font-bold mb-2">No products listed yet</h3>
-                        <p className="text-green-300 mb-6">Start adding your farm products to sell in the marketplace</p>
+                        <div className="text-7xl mb-4">{isSupplier ? '🚜' : '🌾'}</div>
+                        <h3 className="text-white text-2xl font-bold mb-2">
+                            {isSupplier ? 'No equipment or farm supplies listed yet' : 'No products listed yet'}
+                        </h3>
+                        <p className="text-green-300 mb-6">
+                            {isSupplier ? 'Start listing tractors, sprayers, fertilizers, and seeds for farmers to buy' : 'Start adding your farm products to sell in the marketplace'}
+                        </p>
                         <button
                             onClick={() => setShowForm(true)}
                             className="bg-green-500 hover:bg-green-400 text-white font-semibold px-6 py-2.5 rounded-full transition-colors"
                         >
-                            + Add Your First Product
+                            {isSupplier ? '+ List Your First Equipment / Supply' : '+ Add Your First Product'}
                         </button>
                     </div>
                 ) : (
